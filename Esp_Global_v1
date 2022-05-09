@@ -1,0 +1,111 @@
+local ScreenGui = Instance.new("ScreenGui")
+
+
+local RS = game:GetService("RunService")
+local users = game:GetService("UserInputService")
+
+local Max = 1500
+local interval = 0.001
+
+for i, prt in pairs(game.Workspace:GetDescendants()) do
+    if prt:IsA("MeshPart") or prt:IsA("BasePart") then
+        prt.CastShadow = false
+    end
+end
+
+local framecolor = Color3.new(0.431373, 1, 0)
+
+local function makeframe(parent)
+    local frm = Instance.new("Frame", parent)
+    frm.AnchorPoint = Vector2.new(.5,.5)
+    frm.BackgroundColor3 = framecolor
+    frm.BorderSizePixel = 2
+    frm.BorderColor3 = Color3.new(0, 0, 0)
+
+    local TextLabel = Instance.new("TextLabel", frm)
+    TextLabel.Position = UDim2.new(1,0,1,0)
+    TextLabel.Size = UDim2.new(0,35,0,10)
+    TextLabel.TextScaled = true
+    TextLabel.TextColor3 = Color3.new(0, 0.819608, 1)
+    TextLabel.Name = "TextLabel_Count"
+    TextLabel.BackgroundTransparency = 1
+    TextLabel.Text = " "
+    return frm
+end
+
+while task.wait(interval) do
+
+    users.InputBegan:Connect(function(key, typing)
+        if not typing then
+            if key.KeyCode == Enum.KeyCode.RightControl then
+                ScreenGui:Destroy()
+                ScreenGui = Instance.new("ScreenGui")
+            end
+        end
+    end)
+
+    local Players = game:GetService("Players")
+    local Player = Players.LocalPlayer
+    ScreenGui.Parent = Player.PlayerGui
+    ScreenGui.Name = "_stalker_"
+    ScreenGui.IgnoreGuiInset = true
+
+
+
+    for i, plr in ipairs(Players:GetChildren()) do
+        if plr.Name ~= Player.Name then
+
+            local PlayerFrame 
+
+            local Success, fail = pcall(function()
+                PlayerFrame = ScreenGui[plr.Name]
+            end)
+
+            if Success then
+                local hrp 
+                local myhrp 
+                local sc, fl = pcall(function()
+                    hrp = plr.Character.PrimaryPart
+                    myhrp = Player.Character.PrimaryPart
+                end)
+                if sc then
+                    
+                    local camera = workspace.CurrentCamera
+                    local screenpos, onscreen 
+                    local scc, fll = pcall(function()
+                        screenpos, onscreen = camera:WorldToViewportPoint(hrp.Position)
+                    end)
+                    
+                    if scc then
+                        local Mag_ = math.floor((myhrp.Position - hrp.Position).Magnitude)
+
+                        if onscreen == true and Mag_ < Max then
+                            PlayerFrame.Visible = true
+                            local size = math.clamp(5,0.1,Mag_)
+
+
+                            PlayerFrame.Position = UDim2.new(0,screenpos.X,0,screenpos.Y)
+                            PlayerFrame.Size = UDim2.new(0,size,0,size)
+                            PlayerFrame.TextLabel_Count.Text = tostring(Mag_)
+                        else
+                            PlayerFrame.Visible = false
+                            PlayerFrame.TextLabel_Count.Text = ""
+                        end
+                    end
+
+                elseif not sc then
+                    warn(tostring(fl))
+                end
+            else
+                PlayerFrame = makeframe(ScreenGui)
+                PlayerFrame.Name = plr.Name
+            end
+        end
+
+        for i,v in ipairs(ScreenGui:GetChildren()) do
+            if not Players:FindFirstChild(v.Name) then
+                v:Destroy()
+            end
+        end
+    end
+end
