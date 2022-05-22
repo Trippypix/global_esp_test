@@ -1,0 +1,170 @@
+
+local RunService = game:GetService("RunService")
+local usi = game:GetService("UserInputService")
+
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+
+local ScreenGUI = Instance.new("ScreenGui", Player.PlayerGui)
+ScreenGUI.IgnoreGuiInset = true
+ScreenGUI.Name = "Inventory"
+
+local Color = Instance.new("ColorCorrectionEffect",game.Lighting)
+
+
+
+--binds--
+local aimbotbind = Enum.KeyCode.Backquote
+local lightupbind = Enum.KeyCode.J
+
+
+
+RunService.RenderStepped:Connect(function()
+    
+    Player.Character.Humanoid.Died:Connect(function()
+        ScreenGUI = Instance.new("ScreenGui", Player.PlayerGui)
+        ScreenGUI.IgnoreGuiInset = true
+        ScreenGUI.Name = "Inventory"
+    end)
+    
+    Players = game:GetService("Players")
+    Player = Players.LocalPlayer
+
+
+    local function makeframe(parent)
+        local frm = Instance.new("Frame", parent)
+        frm.Position = UDim2.new(.5,0,.5,0)
+        frm.AnchorPoint = Vector2.new(.5,.5)
+
+        local TextLabel = Instance.new("TextLabel", frm)
+        TextLabel.Position = UDim2.new(1,0,1,0)
+        TextLabel.Size = UDim2.new(0,35,0,10)
+        TextLabel.TextScaled = true
+        TextLabel.TextColor3 = Color3.new(0.0392157, 1, 1)
+        TextLabel.Name = "TextLabel_Count"
+        TextLabel.BackgroundTransparency = 1
+        return frm
+    end
+
+
+
+    for i,v in ipairs(Players:GetChildren()) do
+        if v.Character.PrimaryPart and v.Name ~= Player.Name then
+
+            local Frame 
+
+            if not ScreenGUI:FindFirstChild(v.Name) then
+                if Frame ~= nil then
+                    if not Players:FindFirstChild(Frame.Name) then
+                        Frame:Destroy()
+                    end
+                end
+                Frame = makeframe(ScreenGUI)
+                Frame.Name = v.Name
+            else
+                Frame = ScreenGUI:FindFirstChild(v.Name)
+            end
+
+
+            local TargetCharacter = v.Character.PrimaryPart or v.CharacterAdded:Wait().PrimaryPart
+            local TargetHumanoid = v.Character.Humanoid or v.CharacterAdded:Wait().Humanoid
+            local Camera = workspace.CurrentCamera
+            local pos, onscreen = Camera:WorldToViewportPoint(TargetCharacter.Position)
+
+            if (Player.Character.PrimaryPart.Position - TargetCharacter.Position).Magnitude < 1600 and onscreen == true and Frame ~= nil then
+                Frame.Visible = true
+                Frame.Position = UDim2.new(0,pos.X,0,pos.Y)
+
+                local Magnitude            = math.clamp(5,10,(Player.Character.PrimaryPart.Position - TargetCharacter.Position).Magnitude)
+                Frame.Size                 = UDim2.new(0,Magnitude,0,Magnitude)
+                Frame.BackgroundColor3     = Color3.new(0.584314, 0.584314, 0.584314)
+                Frame.TextLabel_Count.Text = tostring(math.floor((Player.Character.PrimaryPart.Position - TargetCharacter.Position).Magnitude))
+            elseif onscreen ~= true and Frame ~= nil then
+                Frame.Visible = false
+                Frame.TextLabel_Count.Text = ""
+            end
+        end
+    end
+end)
+
+local function GetClosest(Position)
+    local camera = game.Workspace.CurrentCamera
+    local ScreenPosition = camera:WorldToViewportPoint(Position)
+    local MousePosition = usi:GetMouseLocation()
+    local Distance = (Vector2.new(ScreenPosition.X,ScreenPosition.Y) - MousePosition).Magnitude
+    return Distance
+end
+
+local DistanceBTW = {}
+
+local lockingon = false
+local lighted = false
+
+local function lockon(min)
+    lockingon = true 
+
+    while true do
+        task.wait()
+
+
+        local player = Players:FindFirstChild(DistanceBTW[min])
+
+        local camera  = game.Workspace.CurrentCamera
+        camera.CFrame = CFrame.lookAt(camera.CFrame.Position,player.Character.Head.Position)
+
+        if lockingon == false then
+            break
+        end
+    end
+end
+
+usi.InputBegan:Connect(function(key,typing)
+    if typing then return end
+    if key.KeyCode == aimbotbind then
+        if lockingon == true then
+            lockingon = false
+            return
+        end
+        
+        DistanceBTW = {}
+
+        for i,v in ipairs(Players:GetChildren()) do
+            if v ~= Player then
+                local Hrp
+                local sc, fl = pcall(function()
+                    Hrp = v.Character.PrimaryPart
+                end)
+                if sc and Hrp ~= nil then
+                    local Distancebtw = GetClosest(Hrp.Position)
+                    DistanceBTW[Distancebtw] = v.Name 
+                end
+            end
+        end
+        --table.sort(DistanceBTW)
+
+        local newtbl = {}
+
+        for i,v in pairs(DistanceBTW) do
+            table.insert(newtbl,i)
+        end
+
+        print(newtbl)
+
+        local min = math.min(table.unpack(newtbl))
+
+        lockon(min)
+
+    end
+
+    if key.KeyCode == lightupbind then
+        if lighted == false then
+            Color.Brightness = 0.5
+            Color.Contrast = 1
+            lighted = true
+        else
+            lighted = false
+            Color.Brightness = 0
+            Color.Contrast = 0
+        end
+    end
+end)
